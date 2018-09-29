@@ -1,0 +1,5 @@
+Implement a script that reads a list of numeric values from a file (containing one value per
+line) and prints the same values in ascending order. script script script.
+
+Implement a script that reads a text file, containing natural language text, and prints each
+word it contains and the number of times the word occurs.
