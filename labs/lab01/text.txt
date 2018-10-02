@@ -3,4 +3,4 @@ line) and prints the same values in ascending order.  Use the quicksort function
 defined.
 
 Implement a script that reads a text file, containing natural language text, and prints each
-word it contains and the number of times the word occurs. script, script e script.
+word it contains and the number of times the word occurs. script, script e script. Dog
