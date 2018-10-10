@@ -1,7 +1,12 @@
 from sklearn.feature_extraction.text import CountVectorizer
 # from prettyPrint import prettyPrint
 
-def occurrences(FILE):
+def printOccur(occurrences):
+	print('Vocabulary    Occurences')
+	for vocab, occur in occurrences.items():
+		print '{} {}'.format(vocab, occur)
+
+def occurrencesDict(FILE):
 	occurrences = {}
 	docs = []
 
@@ -20,16 +25,13 @@ def occurrences(FILE):
 			if frequency[j][i] != 0:
 				occurrences[vocabulary[i]].append([j, frequency[j][i]])
 
-	
-	print('Vocabulary    Occurences')
-	for vocab, occur in occurrences.items():
-		print '{} {}'.format(vocab, occur)
+	# printOccur(occurrences)
 
 	return occurrences
 
 
 def main():
-	occurrences("text.txt")
+	occurrencesDict("text.txt")
 	
 
 if __name__ == "__main__":
