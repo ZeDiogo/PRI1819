@@ -18,6 +18,7 @@ def occurrencesDict(FILE):
 	file.close()
 
 	vocabulary = cv.get_feature_names()
+	print vocabulary
 	frequency = cv_fit.toarray()
 	for i in range(0, len(vocabulary)):
 		occurrences[vocabulary[i]] = []
