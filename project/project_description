@@ -1,0 +1,32 @@
+project PRI
+
+- implement an information search and extraction system
+- large set of documents with electoral manifestos
+- all functionalities available by executing python scripts on the command line
+
+1. ad hoc search on collection of documents - Lab2 
+
+    - query (set of keywords) -> return all manifestos containing such keywords, ordered in relevance
+    - statistics : - # manifestos returned for each party
+                   - # times each party mentions each keyword
+
+    more statistics?
+
+2. classification of docs - according to political affiliation - Lab3
+
+    - given any natural language text -> predict which political party is most likely
+to have produced such text
+    - test effectiveness of predictions (precision, recall and F1)
+
+3. statistical analysis - Lab2
+
+    - discover all named entities mentioned in the manifestos (people, companines, countries)
+    - provide statistics on their usage :
+                - most mentioned entities for each party
+                - most mentioned entities globally
+                - which party mentioned more times by other parties
+                - # times a given party mentions other
+    more statistics?
+
+
+
