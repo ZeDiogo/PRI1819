@@ -31,14 +31,17 @@ class TextInfo:
 		for x in doc.ents:
 			if x.label_ in self.entityDictionary:
 				self.entityDictionary[x.label_][0] += 1
-				if x.text not in self.entityDictionary[x.label_]:
-					self.entityDictionary[x.label_].append(x.text)
+				# if x.text not in self.entityDictionary[x.label_]:
+				# 	self.entityDictionary[x.label_].append(x.text)
 			else:
-				self.entityDictionary[x.label_] = [1, x.text]
+				self.entityDictionary[x.label_] = [1]#s, x.text]
 		print('buildEntityDictionary took', time.time() - start, 'seconds')
 
 	def getEntityFrequency(self, entity):
 		return self.entityDictionary[entity][0]
+
+	def getWordsFromEntity(self, entity):
+		return self.entityDictionary[entity][1:]
 
 	def getWordFrequency(self, word):
 		return self.wordDictionary[word][0]
@@ -48,8 +51,8 @@ class TextInfo:
 		return list(reversed(sorted(freqs, key=lambda x: (isinstance(x, str), x))))
 
 	def getMostMentionedEntities(self, mentions=15):
-		lst = self.getMentionedEntities(entity)
-		return [(x[0], x[1]) if x[0] > mentions for x in lst] #TODO
+		lst = self.getMentionedEntities()
+		return [(x[0], x[1]) for x in lst if x[0] > mentions]
 
 	def printDict(self, dict):
 		for k, v in dict.items():

@@ -21,3 +21,13 @@ class Data:
 
 	def getTitles(self):
 		return self.data["title"].tolist()
+
+	def getPartiesTexts(self):
+		parties = self.getParties()
+		texts = self.getTexts()
+		# print(parties)
+		# for t in self.getTexts():
+		# 	print(t, '\n\n\n\n\n\n\n\n')
+		return [(parties[i], text) for i, text in enumerate(texts)]
+		# print(aux)
+		# return 
