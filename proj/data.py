@@ -7,6 +7,9 @@ class Data:
 		# self.data.columns = ["text","manifesto_id", "party", "date", "title"]
 		# print(self.data)
 
+	def getLength(self):
+		return len(self.data.index)
+
 	def getTexts(self):
 		return self.data["text"].tolist()
 
@@ -15,6 +18,9 @@ class Data:
 
 	def getParties(self):
 		return self.data["party"].tolist()
+
+	def getUniqueParties(self):
+		return list(set(self.getParties()))
 
 	def getDates(self):
 		return self.data["date"].tolist()

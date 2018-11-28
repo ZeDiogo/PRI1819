@@ -5,6 +5,7 @@ from spacy import displacy
 from collections import Counter
 import time
 from pandas import DataFrame
+from bar import Bar
 # python3 -m spacy download en_core_web_sm #40Mb
 # import en_core_web_sm
 
@@ -44,8 +45,8 @@ class Statistics:
 				self.partyDictionary[party] += ' ' + text
 
 	def buildMostMentionedEntities(self):
-		startTotal = time.time()
-		print('Start building most mentioned entities')
+		print('Building most mentioned entities... (~6min)')
+		bar = Bar(self.data.getLength(), timer=True)
 		# self.buildPartyDictionary()
 		for party, text in self.data.getPartiesTexts():
 			doc = self.nlp(text)
@@ -57,17 +58,24 @@ class Statistics:
 					self.mentionsDictionary[party][x.label_] = 1
 				else:
 					self.mentionsDictionary[party][x.label_] += 1
-			print('Party:', party)
+			# print('Party:', party)
 			# print('Party:', party, 'completed in', time.time() - start, 'seconds')
-		print('Builded Most Mentioned Entities in', time.time() - startTotal, 'seconds')
+			bar.update()
+
 
 	def getMentionedEntities(self, party):
 		freqs = [(x[1], x[0]) for x in self.mentionsDictionary[party].items()]
 		return list(reversed(sorted(freqs, key=lambda x: (isinstance(x, str), x))))
 
-	def getMostMentionedEntities(self, party, mentions=15):
+	def getMostMentionedEntities(self, party, minMentions=0, top=100):
 		lst = self.getMentionedEntities(party)
-		return [(x[0], x[1]) for x in lst if x[0] > mentions]
+		res = [(x[0], x[1]) for x in lst if x[0] > minMentions]
+		return res[:top]
+
+	def showMostMentionedEntitiesEachParty(self, top=100, minMentions=0):
+		for party in self.data.getUniqueParties():
+			print('Party:', party, '\nTop', top, ':', self.getMostMentionedEntities(party, top=top, minMentions=minMentions))
+
 
 	# def buildPartyDictionary(self):
 	# 	start = time.time()
