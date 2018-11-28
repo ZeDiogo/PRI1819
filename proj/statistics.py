@@ -72,21 +72,34 @@ class Statistics:
 		res = [(x[0], x[1]) for x in lst if x[0] > minMentions]
 		return res[:top]
 
+	#What are the most mentioned entities for each party?
 	def showMostMentionedEntitiesEachParty(self, top=100, minMentions=0):
 		for party in self.data.getUniqueParties():
 			print('Party:', party, '\nTop', top, ':', self.getMostMentionedEntities(party, top=top, minMentions=minMentions))
 
+	def buildMostMentionedEntitiesGlobally(self):
+		globalEntities = {}
+		for party in self.data.getUniqueParties():
+			for entity, freq in self.mentionsDictionary[party].items():
+				if entity in globalEntities:
+					globalEntities[entity] += freq
+				else:
+					globalEntities[entity] = freq
+		return globalEntities
 
-	# def buildPartyDictionary(self):
-	# 	start = time.time()
-	# 	for party, text in self.data.getPartiesTexts():
-	# 		print(party)
-	# 		if party not in self.partyDictionary:
-	# 			self.partyDictionary[party] = [TextInfo(text)]
-	# 		else:
-	# 			self.partyDictionary[party].append(TextInfo(text))
-	# 	print('buildEntityDictionary took', time.time() - start, 'seconds')
-		
+	#What are the most mentioned entities globally?
+	def showMostMentionedEntitiesGlobally(self, top=100, minMentions=0):
+		print('Most mentioned entities globally:')
+		globalEntities = self.buildMostMentionedEntitiesGlobally()
+		for i, pair in enumerate(globalEntities.items()):
+			entity = pair[0]
+			freq = pair[1]
+			if i >= top:
+				break
+			if freq < minMentions:
+				break
+			print(entity, '->', freq)
+	
 	def printDict(self, dict):
 		for k, v in dict.items():
 			print(k, ': ', v)
