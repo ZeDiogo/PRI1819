@@ -7,6 +7,7 @@ import time
 from pandas import DataFrame
 from bar import Bar
 import json
+import nltk
 # python3 -m spacy download en_core_web_sm #40Mb
 # import en_core_web_sm
 
@@ -18,32 +19,31 @@ class Statistics:
 		self.partyDictionary = {}
 		self.mentionsDictionary = {}
 		self.globalMentionsDictionary = {}
-		# self.partyList = []
 		self.nlp = spacy.load('en_core_web_sm')
-		self.buildMostMentionedEntities()
+		self.buildMostMentionedEntities(useSaved=True)
 
-	def getNamedEntities(self, text):
-		doc = self.nlp(text)
-		idf = {}
-		for x in doc.ents:
-			if x.label_ in idf:
-				idf[x.label_].append(x.text)
-			else:
-				idf[x.label_] = [x.text]
-		return id
+	# def getNamedEntities(self, text):
+	# 	doc = self.nlp(text)
+	# 	idf = {}
+	# 	for x in doc.ents:
+	# 		if x.label_ in idf:
+	# 			idf[x.label_].append(x.text)
+	# 		else:
+	# 			idf[x.label_] = [x.text]
+	# 	return id
 
-	def printNamedEntities(self):
-		for text in self.texts:
-			textInfo = TextInfo(text)
-			print(textInfo.getMostMentionedEntities(mentions=30))
-			break
+	# def printNamedEntities(self):
+	# 	for text in self.texts:
+	# 		textInfo = TextInfo(text)
+	# 		print(textInfo.getMostMentionedEntities(mentions=30))
+	# 		break
 
-	def buildPartyDictionary(self):
-		for party, text in self.data.getPartiesTexts():
-			if party not in self.partyDictionary:
-				self.partyDictionary[party] = text
-			else:
-				self.partyDictionary[party] += ' ' + text
+	# def buildPartyDictionary(self):
+	# 	for party, text in self.data.getPartiesTexts():
+	# 		if party not in self.partyDictionary:
+	# 			self.partyDictionary[party] = text
+	# 		else:
+	# 			self.partyDictionary[party] += ' ' + text
 
 	#In order to improve execution time, the struture generated is stored in a json file
 	def buildMostMentionedEntities(self, useSaved=True):
@@ -61,23 +61,22 @@ class Statistics:
 		if not useSaved:
 			print('Building most mentioned entities... (~6min)')
 			bar = Bar(self.data.getLength(), timer=True)
-			# self.buildPartyDictionary()
 			for party, text in self.data.getPartiesTexts():
 				doc = self.nlp(text)
-				# start = time.time()
 				for x in doc.ents:
 					if party not in self.mentionsDictionary:
-						self.mentionsDictionary[party] = {x.label_:1}
+						self.mentionsDictionary[party] = {x.label_:[1, [x.text]]}
 					elif x.label_ not in self.mentionsDictionary[party]:
-						self.mentionsDictionary[party][x.label_] = 1
+						self.mentionsDictionary[party][x.label_] = [1, [x.text]]
 					else:
-						self.mentionsDictionary[party][x.label_] += 1
+						self.mentionsDictionary[party][x.label_][0] += 1
+						self.mentionsDictionary[party][x.label_][1].append(x.text)
 				bar.update()
 			with open('mostMentionedEntities.json', 'w') as fp:
 				json.dump(self.mentionsDictionary, fp)
 
 	def getMentionedEntities(self, party):
-		freqs = [(x[1], x[0]) for x in self.mentionsDictionary[party].items()]
+		freqs = [(x[1][0], x[0]) for x in self.mentionsDictionary[party].items()]
 		return list(reversed(sorted(freqs, key=lambda x: (isinstance(x, str), x))))
 
 	def getMostMentionedEntities(self, party, minMentions=0, top=100):
@@ -93,7 +92,8 @@ class Statistics:
 	def buildMostMentionedEntitiesGlobally(self):
 		globalEntities = {}
 		for party in self.data.getUniqueParties():
-			for entity, freq in self.mentionsDictionary[party].items():
+			for entity, pair in self.mentionsDictionary[party].items():
+				freq = pair[0]
 				if entity in globalEntities:
 					globalEntities[entity] += freq
 				else:
@@ -112,7 +112,26 @@ class Statistics:
 			if freq < minMentions:
 				break
 			print(entity, '->', freq)
-	
-	def printDict(self, dict):
-		for k, v in dict.items():
-			print(k, ': ', v)
+
+	#Which party is mentioned more times by the other parties?
+	def showMostMentionedPartyByOthers(self):
+		allParties = self.data.getUniqueParties()
+		mentions = self.initDict(allParties)
+		for party in allParties:
+			partiesMentioned = self.mentionsDictionary[party]['NORP'][1]
+			for partyMentioned in partiesMentioned:
+				key = self.matchParty(partyMentioned, allParties)
+				if key:
+					mentions[key] += 1
+
+	def initDict(self, parties):
+		return {party:0 for party in parties}
+
+	def matchParty(self, party, allParties):
+		for keyParty in allParties:
+			print('Party:', party, '| keyParty:', keyParty, '| similarity:', nltk.edit_distance(party, keyParty))
+		return False
+
+	# def printDict(self, dict):
+	# 	for k, v in dict.items():
+	# 		print(k, ': ', v)
