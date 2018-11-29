@@ -6,6 +6,7 @@ from collections import Counter
 import time
 from pandas import DataFrame
 from bar import Bar
+import json
 # python3 -m spacy download en_core_web_sm #40Mb
 # import en_core_web_sm
 
@@ -44,24 +45,36 @@ class Statistics:
 			else:
 				self.partyDictionary[party] += ' ' + text
 
-	def buildMostMentionedEntities(self):
-		print('Building most mentioned entities... (~6min)')
-		bar = Bar(self.data.getLength(), timer=True)
-		# self.buildPartyDictionary()
-		for party, text in self.data.getPartiesTexts():
-			doc = self.nlp(text)
-			# start = time.time()
-			for x in doc.ents:
-				if party not in self.mentionsDictionary:
-					self.mentionsDictionary[party] = {x.label_:1}
-				elif x.label_ not in self.mentionsDictionary[party]:
-					self.mentionsDictionary[party][x.label_] = 1
-				else:
-					self.mentionsDictionary[party][x.label_] += 1
-			# print('Party:', party)
-			# print('Party:', party, 'completed in', time.time() - start, 'seconds')
-			bar.update()
-
+	#In order to improve execution time, the struture generated is stored in a json file
+	def buildMostMentionedEntities(self, useSaved=True):
+		print('BUILD:', useSaved)
+		if useSaved:
+			print('Retriving most mentioned entities...')
+			start = time.time()
+			try:
+				with open('mostMentionedEntities.json', 'r') as fp:
+					self.mentionsDictionary = json.load(fp)
+				print('Finished in', time.time() - start, 'seconds')
+			except FileNotFoundError:
+				print('Most mentioned entities has not been built yet...')
+				useSaved = False
+		if not useSaved:
+			print('Building most mentioned entities... (~6min)')
+			bar = Bar(self.data.getLength(), timer=True)
+			# self.buildPartyDictionary()
+			for party, text in self.data.getPartiesTexts():
+				doc = self.nlp(text)
+				# start = time.time()
+				for x in doc.ents:
+					if party not in self.mentionsDictionary:
+						self.mentionsDictionary[party] = {x.label_:1}
+					elif x.label_ not in self.mentionsDictionary[party]:
+						self.mentionsDictionary[party][x.label_] = 1
+					else:
+						self.mentionsDictionary[party][x.label_] += 1
+				bar.update()
+			with open('mostMentionedEntities.json', 'w') as fp:
+				json.dump(self.mentionsDictionary, fp)
 
 	def getMentionedEntities(self, party):
 		freqs = [(x[1], x[0]) for x in self.mentionsDictionary[party].items()]
