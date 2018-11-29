@@ -12,6 +12,11 @@ project PRI
 
     more statistics?
 
+    dúvidas: - stemming analyzer?
+             - processar queries tb com stemming analyzer?
+             - como comparar scoring?
+             - fazer merge de docs com o mesmo manifesto id?
+
 2. classification of docs - according to political affiliation - Lab3
 
     - given any natural language text -> predict which political party is most likely
@@ -28,5 +33,8 @@ to have produced such text
                 - # times a given party mentions other
     more statistics?
 
+average mentioned entities per party -> global + group by class
+comparar de partido com global -> desvio padrao
+-> ver mais similar (clustering)
 
 
