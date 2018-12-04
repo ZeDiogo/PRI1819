@@ -2,6 +2,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn import metrics
 from sklearn import preprocessing
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction import stop_words
@@ -87,7 +88,9 @@ class Data:
            
             all_metrics=metrics.classification_report(self.test_class, predictions, target_names=self.data.party.unique())
 
-            return [self.clf,  all_metrics]       
+            cm=confusion_matrix(self.test_class, predictions, labels=self.data['Class'].unique(), sample_weight=None)
+            
+            return [self.clf,  all_metrics, cm]       
         
         #For each classifier (cls) we build an optimal version: opt_cls
         if (mode=="normal"):
