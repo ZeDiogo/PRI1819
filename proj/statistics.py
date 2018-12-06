@@ -10,10 +10,9 @@ import json
 import nltk
 import pandas as pd
 import jellyfish as jf
-# from nltk.metrics import jaccard_distance
-# from nltk.metrics import jaro_similarity
-# python3 -m spacy download en_core_web_sm #40Mb
-# import en_core_web_sm
+import operator
+import numpy
+import re
 
 class Statistics:
 
@@ -30,29 +29,8 @@ class Statistics:
 		self.initMentionsKeys()
 		self.descriptions = {}
 		self.initDescriptions()
-
-	# def getNamedEntities(self, text):
-	# 	doc = self.nlp(text)
-	# 	idf = {}
-	# 	for x in doc.ents:
-	# 		if x.label_ in idf:
-	# 			idf[x.label_].append(x.text)
-	# 		else:
-	# 			idf[x.label_] = [x.text]
-	# 	return id
-
-	# def printNamedEntities(self):
-	# 	for text in self.texts:
-	# 		textInfo = TextInfo(text)
-	# 		print(textInfo.getMostMentionedEntities(mentions=30))
-	# 		break
-
-	# def buildPartyDictionary(self):
-	# 	for party, text in self.data.getPartiesTexts():
-	# 		if party not in self.partyDictionary:
-	# 			self.partyDictionary[party] = text
-	# 		else:
-	# 			self.partyDictionary[party] += ' ' + text
+		self.buildMentionedPartyByOthers()
+		self.tradutor = {}
 
 	#In order to improve execution time, the struture generated is stored in a json file
 	def buildMostMentionedEntities(self, useSaved=True):
@@ -88,6 +66,16 @@ class Statistics:
 		freqs = [(x[1][0], x[0]) for x in self.mentionsDictionary[party].items()]
 		return list(reversed(sorted(freqs, key=lambda x: (isinstance(x, str), x))))
 
+	def getMentionedEntitiesOrderByNamedEntity(self, party):
+		l = self.getMentionedEntities(party)
+		#need simular vectors
+		allNamedEntities = self.descriptions.keys()
+		for namedEntity in allNamedEntities:
+			if namedEntity not in self.mentionsDictionary[party].keys():
+				l.append((0, namedEntity))
+		ordered = sorted(l, key=lambda x: x[1])
+		return [x[0] for x in ordered]
+
 	def getMostMentionedEntities(self, party, minMentions=0, top=100):
 		lst = self.getMentionedEntities(party)
 		res = [(x[0], x[1]) for x in lst if x[0] > minMentions]
@@ -113,8 +101,7 @@ class Statistics:
 				else:
 					globalEntities[entity] = freq
 
-		freqs = [(x[1], x[0]) for x in globalEntities.items()]			
-		return list(reversed(sorted(freqs, key=lambda x: (isinstance(x, str), x))))
+		return self.dict2listOrderedByValue(globalEntities)
 
 	#What are the most mentioned entities globally?
 	def showMostMentionedEntitiesGlobally(self, top=100, minMentions=0):
@@ -133,28 +120,137 @@ class Statistics:
 				break
 			print('\t', freq, '\t\t', self.descriptions[entity])
 
-	#Which party is mentioned more times by the other parties?
-	def showMostMentionedPartyByOthers(self):
+	
+	def buildMentionedPartyByOthers(self):
 		allParties = self.data.getUniqueParties()
-		mentions = self.initDict(allParties)
-		print()
-		print('Which party mentiones the other ones:')
-		print()
-		print('\tParty\\Mentioned')
-		
+		self.mentions = self.initDict(allParties)
+			
 		for party in allParties:
 			partiesMentioned = self.mentionsDictionary[party]['NORP'][1]
 			for partyMentioned in partiesMentioned:
 				key = self.matchParty(partyMentioned, allParties)
 				if key and key != party: #party x doesnt mention itself
-					mentions[party][key] += 1
+					self.mentions[party][key] += 1
 
+	#show matrix of mentions
+	def showMentionsMatrix(self):
+		allParties = self.data.getUniqueParties()
+		print()
+		print('Which party mentiones the other ones:')
+		print()
+		print('\tMentioned Party\\Party who mentioned')
+		m = {}
 		for i, p in enumerate(allParties):
+			m['(' + str(i).zfill(2) + ')'] = {}
 			for j, p2 in enumerate(allParties):
-				mentions[p]['(' + str(j) + ')' + p2] = mentions[p].pop(p2)
-			mentions['(' + str(i) + ')'] = mentions.pop(p)
-		dfMentions = pd.DataFrame(mentions)
+				m['(' + str(i).zfill(2) + ')']['(' + str(j).zfill(2) + ')' + p2] = self.mentions[p][p2]
+			# mentions['(' + str(i) + ')'] = mentions.pop(p)
+		dfMentions = pd.DataFrame(m)
 		print(dfMentions.to_string())
+
+	#Which party is mentioned more times by the other parties?
+	def showMostMentionedParty(self):
+		allParties = self.data.getUniqueParties()
+		totalMentions = {}
+		for whoWasMentioned in allParties:
+			totalMentions[whoWasMentioned] = 0
+			for whoMentioned in allParties:
+				totalMentions[whoWasMentioned] += self.mentions[whoMentioned][whoWasMentioned]
+		print()
+		print('Most mentioned party:')
+		mostMentioned = max(totalMentions.items(), key=operator.itemgetter(1))[0]
+		print('\t', mostMentioned, totalMentions[mostMentioned], 'times')
+		print('\t\tMentioned by:')
+		maxLength = self.data.getMaxLengthParty()
+		forOrder = []
+		for whoMentioned in allParties:
+			forOrder.append((self.mentions[whoMentioned][mostMentioned], whoMentioned))
+
+		for refs, whoMentioned in list(reversed(sorted(forOrder, key=lambda x: (isinstance(x, str), x)))):
+			spacing = maxLength-len(whoMentioned)
+			print('\t\t\t', whoMentioned, ' '*spacing, refs, 'times')
+
+	def sumAllValues(self, d):
+		total = 0
+		for k, v in d.items():
+			total += v
+		return total
+
+	def dict2listOrderedByValue(self, d):
+		freqs = [(x[1], x[0]) for x in d.items()]
+		return list(reversed(sorted(freqs, key=lambda x: (isinstance(x, str), x))))
+
+	#How many times does any given party mention other parties?
+	def showHowManyTimesEachPartyMentionsOthers(self):
+		print()
+		print('How many times each party mentiones others:')
+		print()
+		allParties = self.data.getUniqueParties()
+		totalMentions = {}
+		for whoMentioned in allParties:
+			totalMentions[whoMentioned] = self.sumAllValues(self.mentions[whoMentioned])
+
+		maxLength = self.data.getMaxLengthParty()
+		for freq, whoMentioned in self.dict2listOrderedByValue(totalMentions):
+			spacing = maxLength-len(whoMentioned)
+			print('\t', whoMentioned, ' '*spacing, freq, 'times')
+
+	def Edistance(self,v1,v2):
+		a = numpy.array(v1)
+		b = numpy.array(v2)
+		return numpy.sqrt(sum((a-b)**2))
+
+	def buildDistanceBetweenNamedEntities(self):
+		allParties = self.data.getUniqueParties()
+		vectors = {}
+		for party in allParties:
+			vectors[party] = self.getMentionedEntitiesOrderByNamedEntity(party)
+
+		distances = {}
+		for i, p1 in enumerate(allParties):
+			key = '(' + str(i).zfill(2) + ')'
+			distances[key] = {}
+			self.tradutor[key] = p1
+			for j, p2 in enumerate(allParties):
+				if i <= j:
+					key2 = '(' + str(j).zfill(2) + ')' + p2
+					distances[key][key2] = '%.2f' % self.Edistance(vectors[p1], vectors[p2])
+					self.tradutor[key2] = p2
+		return distances
+
+	#Vector distance between named entities vectores for each party
+	def showDistanceBetweenNamedEntities(self):
+		distances = self.buildDistanceBetweenNamedEntities()
+		df = pd.DataFrame(distances)
+		print()
+		print('Euclidean Distance between named entities:')
+		print()
+		print(df.to_string())
+
+	def showMostSimilarParties(self, threshold=500):
+		allParties = self.data.getUniqueParties()
+		distances = self.buildDistanceBetweenNamedEntities()
+		
+		simScores = []
+		for p1 in distances.keys():
+			# simScores[p1] = {}
+			for p2 in distances[p1].keys():
+				# simScores[p1][p2] = 1/float(distances[p1][p2])
+				dist = float(distances[p1][p2])
+				print(dist)
+				if dist < threshold and dist > 0:
+					simScores.append((dist, self.tradutor[p1] + ' <--> ' + self.tradutor[p2]))
+
+		print()
+		print('Similiarity Score between named entities:')
+		print()
+		maxLength = self.data.getMaxLengthParty()*2+6
+		spacing = maxLength-len('Parties')
+		print('\tParties' + ' '*spacing + 'Distance')
+		print()
+		for dist, parties in sorted(simScores, key=lambda x: x[0]):
+			spacing = maxLength-len(parties)
+			print('\t', parties, ' '*spacing, dist)
 
 	def initDict(self, parties):
 		return {p:{party:0 for party in parties} for p in parties}
@@ -203,9 +299,3 @@ class Statistics:
 		file = pd.read_csv('spacyNamedEntities.csv', sep=';', header=0)
 		for namedEntity, description in zip(file['namedEntity'].tolist(), file['description'].tolist()):
 			self.descriptions[namedEntity] = description
-
-
-
-	# def printDict(self, dict):
-	# 	for k, v in dict.items():
-	# 		print(k, ': ', v)
