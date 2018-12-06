@@ -140,11 +140,7 @@ class Statistics:
 		print()
 		print('Which party mentiones the other ones:')
 		print()
-		header = '\tParty\\Mentioned'
-		for p in allParties:
-			header += '\t' + p
-		print(header)
-		print()
+		print('\tParty\\Mentioned')
 		
 		for party in allParties:
 			partiesMentioned = self.mentionsDictionary[party]['NORP'][1]
@@ -153,13 +149,12 @@ class Statistics:
 				if key and key != party: #party x doesnt mention itself
 					mentions[party][key] += 1
 
-		for whoMentioned, mentioned in mentions.items():
-			line = '\t' + whoMentioned
-			for whoWasMentioned, numberMentions in mentioned.items():
-				line += '\t' + whoWasMentioned + str(numberMentions)
-			print(line)
-
-		
+		for i, p in enumerate(allParties):
+			for j, p2 in enumerate(allParties):
+				mentions[p]['(' + str(j) + ')' + p2] = mentions[p].pop(p2)
+			mentions['(' + str(i) + ')'] = mentions.pop(p)
+		dfMentions = pd.DataFrame(mentions)
+		print(dfMentions.to_string())
 
 	def initDict(self, parties):
 		return {p:{party:0 for party in parties} for p in parties}
@@ -171,7 +166,7 @@ class Statistics:
 
 		#using manual references
 		if mention in self.mentionKeys:
-			self.saveMatch('Using etiquetas: ' + str(mention) + ' -> ' + str(self.mentionKeys[mention]))
+			self.saveMatch('matches.txt', 'Using etiquetas: ' + str(mention) + ' -> ' + str(self.mentionKeys[mention]))
 			return self.mentionKeys[mention]
 		
 		for party in allParties:
@@ -179,7 +174,7 @@ class Statistics:
 
 			#Using distance for full title
 			if jf.levenshtein_distance(mention, keyParty) < 5:
-				self.saveMatch('Full title jaro distance: ' + str(mention) + ' -> ' + str(party))
+				self.saveMatch('matches.txt', 'Full title jaro distance: ' + str(mention) + ' -> ' + str(party))
 				return party
 
 			#Using distance for single word in party title
@@ -188,15 +183,15 @@ class Statistics:
 				# 	self.saveMatch('Single word jaro distance: ' + str(mention) + ' -> ' + str(party))
 				# 	return party
 				if jf.levenshtein_distance(mention, word) < 3:
-					self.saveMatch('Single word levenstein distance: ' + str(mention) + ' -> ' + str(party))
+					self.saveMatch('matches.txt', 'Single word levenstein distance: ' + str(mention) + ' -> ' + str(party))
 					return party
 			# print('Party:', party, '| keyParty:', keyParty, '| levenshtein_dist:', jf.levenshtein_distance(party, keyParty), '| jaro:', jf.jaro_distance(party, keyParty))
 			# self.saveMatch('Mention:' + str(mention) + '| keyParty:' + str(keyParty) + '| levenshtein_dist:' + str(jf.levenshtein_distance(mention, keyParty)) + '| jaro:' + str(jf.jaro_distance(mention, keyParty)))
 		
 		return False
 
-	def saveMatch(self, line):
-		with open('matches.txt', 'a') as fp:
+	def saveMatch(self, filename, line):
+		with open(filename, 'a') as fp:
 			fp.write(line + '\n')
 
 	def initMentionsKeys(self):
