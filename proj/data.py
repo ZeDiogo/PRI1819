@@ -37,3 +37,10 @@ class Data:
 		return [(parties[i], text) for i, text in enumerate(texts)]
 		# print(aux)
 		# return 
+
+	def getMaxLengthParty(self):
+		maxLength = 0
+		for party in self.getUniqueParties():
+			if len(party) > maxLength:
+				maxLength = len(party)
+		return maxLength
