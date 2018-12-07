@@ -1,6 +1,10 @@
 Information Processing and Retrieval - Course Project - Group 8
 Andreia Rogério 78557 Francisca Ribeiro 81117 José Diogo Oliveira 75255
 
+To run the project:
+Enter code directory:
+>> cd code/
+
 a) Ad hoc search on the collection of documents
 
 To run the code for this part in the command line just introduce:
@@ -29,4 +33,15 @@ Required libraries:
 Important notes:
 - To use the createClassifier() in "w2v" mode you should download the file GoogleNews-vectors-negative300.bin.gz and un-comment the word2vec initialization lines in classify.py
 
-c) 
+c) To run the statistics:
+>> ./run.sh
+
+It will display several options and them you should write the number corresponding to the statistic you want to see.
+
+Required libraries:
+-pandas
+>>pip3 install pandas
+-jellyfish
+>>pip3 install jellyfish
+-spacy
+>>python3 -m spacy download en
