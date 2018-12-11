@@ -1,5 +1,4 @@
 from data import Data
-from textInfo import TextInfo
 import spacy
 from spacy import displacy
 from collections import Counter
@@ -13,17 +12,19 @@ import jellyfish as jf
 import operator
 import numpy
 import re
+import matplotlib.pyplot as plt
 
 class Statistics:
 
 	def __init__(self, filename):
+		self.totalMentions = 0 #aux
 		self.data = Data(filename)
 		self.texts = self.data.getTexts()
 		self.partyDictionary = {}
 		self.mentionsDictionary = {}
 		self.globalMentionsDictionary = {}
 		self.nlp = spacy.load('en_core_web_sm')
-		self.buildMostMentionedEntities(useSaved=True)
+		self.buildIndexNamedEntities(useSaved=True)
 		self.unique = {}
 		self.mentionKeys = {}
 		self.initMentionsKeys()
@@ -31,9 +32,10 @@ class Statistics:
 		self.initDescriptions()
 		self.buildMentionedPartyByOthers()
 		self.tradutor = {}
+		
 
 	#In order to improve execution time, the struture generated is stored in a json file
-	def buildMostMentionedEntities(self, useSaved=True):
+	def buildIndexNamedEntities(self, useSaved=True):
 		print('BUILD:', useSaved)
 		if useSaved:
 			print('Retriving most mentioned entities...')
@@ -82,7 +84,7 @@ class Statistics:
 		return res[:top]
 
 	#What are the most mentioned entities for each party?
-	def showMostMentionedEntitiesEachParty(self, top=5, minMentions=0):
+	def showMostMentionedEntitiesEachParty(self, top=3, minMentions=0):
 		print()
 		print('Parties with top', top, 'named entities:')
 		print()
@@ -119,18 +121,19 @@ class Statistics:
 			if freq < minMentions:
 				break
 			print('\t', freq, '\t\t', self.descriptions[entity])
-
 	
 	def buildMentionedPartyByOthers(self):
 		allParties = self.data.getUniqueParties()
 		self.mentions = self.initDict(allParties)
-			
+		self.totalPartyMentions = 0
 		for party in allParties:
 			partiesMentioned = self.mentionsDictionary[party]['NORP'][1]
 			for partyMentioned in partiesMentioned:
 				key = self.matchParty(partyMentioned, allParties)
 				if key and key != party: #party x doesnt mention itself
 					self.mentions[party][key] += 1
+					self.totalPartyMentions += 1
+
 
 	#show matrix of mentions
 	def showMentionsMatrix(self):
@@ -147,6 +150,8 @@ class Statistics:
 			# mentions['(' + str(i) + ')'] = mentions.pop(p)
 		dfMentions = pd.DataFrame(m)
 		print(dfMentions.to_string())
+		dfMentions.plot(kind='bar')
+		plt.show()
 
 	#Which party is mentioned more times by the other parties?
 	def showMostMentionedParty(self):
@@ -256,13 +261,12 @@ class Statistics:
 		return {p:{party:0 for party in parties} for p in parties}
 
 	def matchParty(self, mention, allParties):
-		# self.unique[mention] = 1
 		mention = mention.lower().strip()
 		if len(mention) == 0: return False #spaces
-
+		self.totalMentions += 1
 		#using manual references
 		if mention in self.mentionKeys:
-			self.saveMatch('matches.txt', 'Using etiquetas: ' + str(mention) + ' -> ' + str(self.mentionKeys[mention]))
+			# self.saveMatch('matches.txt', 'Using etiquetas: ' + str(mention) + ' -> ' + str(self.mentionKeys[mention]))
 			return self.mentionKeys[mention]
 		
 		for party in allParties:
@@ -270,7 +274,7 @@ class Statistics:
 
 			#Using distance for full title
 			if jf.levenshtein_distance(mention, keyParty) < 5:
-				self.saveMatch('matches.txt', 'Full title jaro distance: ' + str(mention) + ' -> ' + str(party))
+				# self.saveMatch('matches.txt', 'Full title jaro distance: ' + str(mention) + ' -> ' + str(party))
 				return party
 
 			#Using distance for single word in party title
@@ -279,11 +283,10 @@ class Statistics:
 				# 	self.saveMatch('Single word jaro distance: ' + str(mention) + ' -> ' + str(party))
 				# 	return party
 				if jf.levenshtein_distance(mention, word) < 3:
-					self.saveMatch('matches.txt', 'Single word levenstein distance: ' + str(mention) + ' -> ' + str(party))
+					# self.saveMatch('matches.txt', 'Single word levenstein distance: ' + str(mention) + ' -> ' + str(party))
 					return party
-			# print('Party:', party, '| keyParty:', keyParty, '| levenshtein_dist:', jf.levenshtein_distance(party, keyParty), '| jaro:', jf.jaro_distance(party, keyParty))
-			# self.saveMatch('Mention:' + str(mention) + '| keyParty:' + str(keyParty) + '| levenshtein_dist:' + str(jf.levenshtein_distance(mention, keyParty)) + '| jaro:' + str(jf.jaro_distance(mention, keyParty)))
-		
+
+		self.totalMentions -= 1
 		return False
 
 	def saveMatch(self, filename, line):
@@ -291,7 +294,7 @@ class Statistics:
 			fp.write(line + '\n')
 
 	def initMentionsKeys(self):
-		file = pd.read_csv('mentionsTrain.csv', sep=',', header=0)
+		file = pd.read_csv('mentionsLabelling.csv', sep=',', header=0)
 		for key, party in zip(file['key'].tolist(), file['party'].tolist()):
 			self.mentionKeys[key] = party
 
